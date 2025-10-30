@@ -30,9 +30,9 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col"> {/* Added flex flex-col */}
       <Navbar /> {/* Integrate the Navbar component here */}
-      {/* <h1 className="text-4xl font-bold text-center text-gray-800 my-8">
-        Passport Photo Generator
-      </h1> */}
+      <h1 className="text-4xl font-bold text-center text-gray-800 my-8 sr-only">
+        Portimage Sheet - Online A4 Image Converter & Editor
+      </h1>
 
       <div className="flex-grow max-w-4xl mx-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-6"> {/* Added flex-grow */}
         <div className="col-span-2">

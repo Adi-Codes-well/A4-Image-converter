@@ -5,7 +5,7 @@ const Navbar = () => {
     <nav className="bg-gray-800 p-4">
       <div className="container mx-auto flex justify-between items-center">
         <a href="/" className="text-white text-2xl font-bold">
-          Passport Photo Generator
+          Portimage Sheet
         </a>
         {/* You can add navigation links here if needed */}
         {/* <div>
