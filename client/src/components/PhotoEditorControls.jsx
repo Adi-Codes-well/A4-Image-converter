@@ -5,10 +5,10 @@ import axios from "axios";
 // Helper function to safely convert Data URI (Base64 string) to a Blob
 const dataURIToBlob = (dataURI) => {
   // Use modern Blob constructor for safer Data URI handling
-  const byteString = atob(dataURI.split(',')[1]);
+  const byteString = atob(dataURI.split(",")[1]);
   const mimeMatch = dataURI.match(/:(.*?);/);
   const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
-  
+
   const ab = new ArrayBuffer(byteString.length);
   const ia = new Uint8Array(ab);
   for (let i = 0; i < byteString.length; i++) {
@@ -65,7 +65,9 @@ const PhotoEditorControls = ({
 
       // Defensive check for empty or invalid image data from server
       if (!response.data || response.data.byteLength === 0)
-        throw new Error("Server returned empty image, check server logs for API key/file size limits.");
+        throw new Error(
+          "Server returned empty image, check server logs for API key/file size limits."
+        );
 
       const transparentImageBlob = new Blob([response.data], {
         type: "image/png",
@@ -78,10 +80,14 @@ const PhotoEditorControls = ({
         const tempCtx = tempCanvas.getContext("2d");
         const img = new Image();
         img.crossOrigin = "anonymous";
-        
+
         // Error handler to prevent silent hangs
         img.onerror = () => {
-          reject(new Error("Browser failed to decode image data (potentially corrupted PNG)."));
+          reject(
+            new Error(
+              "Browser failed to decode image data (potentially corrupted PNG)."
+            )
+          );
         };
 
         img.onload = () => {
@@ -148,25 +154,28 @@ const PhotoEditorControls = ({
         type: "SET_PROCESSED_IMAGE",
         payload: finalCanvas.toDataURL("image/jpeg"),
       });
-
     } catch (err) {
       // Catch all errors (network, custom empty image, promise reject)
       let errorMessage = err.message || "Internal processing failed";
 
       if (err.response && err.response.data) {
-          // Attempt to decode server's JSON error response
-          try {
-              const errorText = new TextDecoder().decode(err.response.data);
-              const errorJson = JSON.parse(errorText);
-              errorMessage = errorJson.error || `Server Error (${err.response.status}): ${errorMessage}`;
-          } catch {
-              errorMessage = `Server Error (${err.response.status}): Could not parse error message.`;
-          }
+        // Attempt to decode server's JSON error response
+        try {
+          const errorText = new TextDecoder().decode(err.response.data);
+          const errorJson = JSON.parse(errorText);
+          errorMessage =
+            errorJson.error ||
+            `Server Error (${err.response.status}): ${errorMessage}`;
+        } catch {
+          errorMessage = `Server Error (${err.response.status}): Could not parse error message.`;
+        }
       }
-      
-      console.error('Error processing image:', err);
-      dispatch({ type: "SET_ERROR", payload: `Processing failed: ${errorMessage}` });
 
+      console.error("Error processing image:", err);
+      dispatch({
+        type: "SET_ERROR",
+        payload: `Processing failed: ${errorMessage}`,
+      });
     } finally {
       // GUARANTEED CLEANUP: Resets loading state and revokes object URL
       dispatch({ type: "SET_LOADING", payload: false });
@@ -191,52 +200,90 @@ const PhotoEditorControls = ({
     <div className="p-4 border rounded-lg shadow-sm bg-white">
       <h3 className="text-xl font-semibold mb-4">Edit & Process Photo</h3>
 
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">Background Color:</label>
-        <div className="flex items-center">
-          <div
-            className="w-10 h-10 rounded-full border cursor-pointer"
-            style={{ backgroundColor }}
-            onClick={handleClick}
-          ></div>
-          <span className="ml-3 text-gray-800">{backgroundColor}</span>
+      <div className="flex justify-around">
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Background Color
+          </label>
+          <div className="flex items-center">
+            <div
+              className="w-10 h-10 rounded-full border cursor-pointer"
+              style={{ backgroundColor }}
+              onClick={handleClick}
+            ></div>
+            <span className="ml-3 text-gray-800">{backgroundColor}</span>
+          </div>
+
+          {displayColorPicker && (
+            <div style={popover}>
+              <div style={cover} onClick={handleClose} />
+              <SketchPicker
+                color={backgroundColor}
+                onChangeComplete={handleChangeComplete}
+              />
+            </div>
+          )}
         </div>
 
-        {displayColorPicker && (
-          <div style={popover}>
-            <div style={cover} onClick={handleClose} />
-            <SketchPicker
-              color={backgroundColor}
-              onChangeComplete={handleChangeComplete}
-            />
-          </div>
-        )}
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="imagesPerRow" className="block text-sm font-medium text-gray-700 mb-2">
-          Images per row:
-        </label>
-        <input
-          type="number"
-          id="imagesPerRow"
-          min="1"
-          value={imagesPerRow}
-          onChange={(e) => dispatch({ type: 'SET_IMAGES_PER_ROW', payload: parseInt(e.target.value) || 1 })}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-        />
+        <div className="mb-4">
+          <label
+            htmlFor="imagesPerRow"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Images per row:
+          </label>
+          <input
+            type="number"
+            id="imagesPerRow"
+            min="1"
+            value={imagesPerRow}
+            onChange={(e) =>
+              dispatch({
+                type: "SET_IMAGES_PER_ROW",
+                payload: parseInt(e.target.value) || 1,
+              })
+            }
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+          />
+        </div>
       </div>
 
       <button
         onClick={processImage}
         disabled={!alignedImage || loading}
-        className={`w-full px-4 py-2 rounded-md text-white font-semibold transition-colors ${
+        className={`w-full px-4 py-2 rounded-md text-white font-semibold transition-colors flex items-center justify-center ${
           !alignedImage || loading
             ? "bg-gray-400 cursor-not-allowed"
             : "bg-green-600 hover:bg-green-700"
         }`}
       >
-        {loading ? "Processing..." : "Remove Background & Apply Color"}
+        {loading ? (
+          <>
+            <svg
+              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Processing...
+          </>
+        ) : (
+          "Remove Background & Apply Color"
+        )}
       </button>
 
       {error && (

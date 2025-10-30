@@ -6,6 +6,7 @@ const ImageCropperModal = ({ uploadedImage, dispatch, onClose }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isCropping, setIsCropping] = useState(false); // New state for loader
 
   useEffect(() => {
     const loadModels = async () => {
@@ -39,77 +40,83 @@ const ImageCropperModal = ({ uploadedImage, dispatch, onClose }) => {
       return;
     }
 
-    const image = new Image();
-    image.src = uploadedImage;
-    await new Promise((resolve) => {
-      image.onload = resolve;
-    });
+    setIsCropping(true); // Set loading state
 
-    const canvas = document.createElement('canvas');
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-
-    canvas.width = croppedAreaPixels.width;
-    canvas.height = croppedAreaPixels.height;
-    const ctx = canvas.getContext('2d');
-
-    ctx.drawImage(
-      image,
-      croppedAreaPixels.x * scaleX,
-      croppedAreaPixels.y * scaleY,
-      croppedAreaPixels.width * scaleX,
-      croppedAreaPixels.height * scaleY,
-      0,
-      0,
-      croppedAreaPixels.width,
-      croppedAreaPixels.height
-    );
-
-    const croppedImageBase64 = canvas.toDataURL('image/jpeg');
-    console.log('Image cropped to base64.');
-
-    // Face alignment
-    console.log('Attempting face detection...');
-    let detections = null;
     try {
-      console.log('Before faceapi.detectSingleFace');
-      detections = await faceapi.detectSingleFace(
-        canvas,
-        new faceapi.TinyFaceDetectorOptions()
-      ).withFaceLandmarks();
-      console.log('After faceapi.detectSingleFace. Detections:', detections);
-    } catch (error) {
-      console.error('Error during face detection:', error);
-      dispatch({ type: 'SET_ERROR', payload: `Face detection failed: ${error.message}` });
+      const image = new Image();
+      image.src = uploadedImage;
+      await new Promise((resolve) => {
+        image.onload = resolve;
+      });
+
+      const canvas = document.createElement('canvas');
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+
+      canvas.width = croppedAreaPixels.width;
+      canvas.height = croppedAreaPixels.height;
+      const ctx = canvas.getContext('2d');
+
+      ctx.drawImage(
+        image,
+        croppedAreaPixels.x * scaleX,
+        croppedAreaPixels.y * scaleY,
+        croppedAreaPixels.width * scaleX,
+        croppedAreaPixels.height * scaleY,
+        0,
+        0,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height
+      );
+
+      const croppedImageBase64 = canvas.toDataURL('image/jpeg');
+      console.log('Image cropped to base64.');
+
+      // Face alignment
+      console.log('Attempting face detection...');
+      let detections = null;
+      try {
+        console.log('Before faceapi.detectSingleFace');
+        detections = await faceapi.detectSingleFace(
+          canvas,
+          new faceapi.TinyFaceDetectorOptions()
+        ).withFaceLandmarks();
+        console.log('After faceapi.detectSingleFace. Detections:', detections);
+      } catch (error) {
+        console.error('Error during face detection:', error);
+        dispatch({ type: 'SET_ERROR', payload: `Face detection failed: ${error.message}` });
+      }
+
+
+      if (detections) {
+        console.log('Face detected, performing alignment.');
+        const { box } = detections.detection;
+        const faceCenterY = box.y + box.height / 2;
+        const imageCenterY = canvas.height / 2;
+        const offsetY = imageCenterY - faceCenterY;
+
+        const alignedCanvas = document.createElement('canvas');
+        alignedCanvas.width = canvas.width;
+        alignedCanvas.height = canvas.height;
+        const alignedCtx = alignedCanvas.getContext('2d');
+
+        alignedCtx.translate(0, offsetY);
+        alignedCtx.drawImage(canvas, 0, 0);
+
+        dispatch({ type: 'SET_ALIGNED_IMAGE', payload: alignedCanvas.toDataURL('image/jpeg') });
+        console.log('Dispatched SET_ALIGNED_IMAGE with aligned image.');
+      } else {
+        console.log('No face detected, dispatching SET_ALIGNED_IMAGE with cropped image.');
+        dispatch({ type: 'SET_ALIGNED_IMAGE', payload: croppedImageBase64 });
+      }
+
+      dispatch({ type: 'SET_CROP_DATA', payload: croppedAreaPixels });
+      console.log('Dispatched SET_CROP_DATA.');
+      onClose();
+      console.log('onClose called.');
+    } finally {
+      setIsCropping(false); // Reset loading state
     }
-
-
-    if (detections) {
-      console.log('Face detected, performing alignment.');
-      const { box } = detections.detection;
-      const faceCenterY = box.y + box.height / 2;
-      const imageCenterY = canvas.height / 2;
-      const offsetY = imageCenterY - faceCenterY;
-
-      const alignedCanvas = document.createElement('canvas');
-      alignedCanvas.width = canvas.width;
-      alignedCanvas.height = canvas.height;
-      const alignedCtx = alignedCanvas.getContext('2d');
-
-      alignedCtx.translate(0, offsetY);
-      alignedCtx.drawImage(canvas, 0, 0);
-
-      dispatch({ type: 'SET_ALIGNED_IMAGE', payload: alignedCanvas.toDataURL('image/jpeg') });
-      console.log('Dispatched SET_ALIGNED_IMAGE with aligned image.');
-    } else {
-      console.log('No face detected, dispatching SET_ALIGNED_IMAGE with cropped image.');
-      dispatch({ type: 'SET_ALIGNED_IMAGE', payload: croppedImageBase64 });
-    }
-
-    dispatch({ type: 'SET_CROP_DATA', payload: croppedAreaPixels });
-    console.log('Dispatched SET_CROP_DATA.');
-    onClose();
-    console.log('onClose called.');
   }, [uploadedImage, croppedAreaPixels, dispatch, onClose]);
 
   return (
@@ -154,13 +161,13 @@ const ImageCropperModal = ({ uploadedImage, dispatch, onClose }) => {
           <button
             onClick={showCroppedImage}
             className={`px-4 py-2 rounded-md transition-colors ${
-              croppedAreaPixels
+              croppedAreaPixels && !isCropping
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-400 text-gray-700 cursor-not-allowed'
             }`}
-            disabled={!croppedAreaPixels}
+            disabled={!croppedAreaPixels || isCropping}
           >
-            Apply Crop & Align
+            {isCropping ? 'Applying...' : 'Apply Crop & Align'}
           </button>
         </div>
       </div>
