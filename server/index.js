@@ -7,7 +7,26 @@ import removeBackgroundRoute from "./routes/removeBackground.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
-app.use(cors());
+
+
+const allowedOrigins = [
+  'http://localhost:5173', // Dev frontend
+  'https://a4-image-converter.vercel.app', // Production frontend URL
+  'https://a4-image-converter-1.onrender.com' // Production frontend URL
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true); 
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true // Crucial for session cookies, API tokens, etc.
+}));
 app.use("/api/remove-background", removeBackgroundRoute);
 
 // Serve static files from the React app's build directory
