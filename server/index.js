@@ -6,6 +6,7 @@ import removeBackgroundRoute from "./routes/removeBackground.js";
 
 dotenv.config();
 const app = express();
+const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use("/api/remove-background", removeBackgroundRoute);
 
@@ -17,4 +18,4 @@ app.get(/.*/, (req, res) => { // Changed "/*" to a regex to match any path
   res.sendFile(path.resolve(process.cwd(), "client", "dist", "index.html"));
 });
 
-app.listen(5000, () => console.log("Server running on port 5000"));
+app.listen(PORT, () => console.log("Server running on port 5000"));
