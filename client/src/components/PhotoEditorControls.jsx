@@ -55,7 +55,7 @@ const PhotoEditorControls = ({
 
       // 2. Network Call to Server API
       const response = await axios.post(
-        "http://localhost:5000/api/remove-background",
+        "https://portimage-server.onrender.com/api/remove-background",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
