@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 
-const A4SheetPreview = ({ processedImage, finalSheetURL, dispatch }) => {
+const A4SheetPreview = ({ processedImage, finalSheetURL, imagesPerRow, dispatch }) => {
   const canvasRef = useRef(null);
 
   const generateA4Sheet = useCallback(() => {
@@ -22,39 +22,58 @@ const A4SheetPreview = ({ processedImage, finalSheetURL, dispatch }) => {
     img.src = processedImage;
 
     img.onload = () => {
-      const photoWidth = img.width; // Should be 2 inches * 300 DPI = 600px
-      const photoHeight = img.height; // Should be 2 inches * 300 DPI = 600px
+      // Passport photo dimensions: 3.5cm x 4.5cm at 300 DPI
+      // 1 inch = 2.54 cm
+      // 3.5 cm = 1.378 inches => 1.378 * 300 DPI = 413.4 pixels
+      // 4.5 cm = 1.772 inches => 1.772 * 300 DPI = 531.6 pixels
+      const photoWidth = 413; // pixels for 3.5cm
+      const photoHeight = 531; // pixels for 4.5cm
 
-      const margin = 50; // Pixels for spacing
-      const photosPerRow = Math.floor((A4_WIDTH_PX - 2 * margin) / photoWidth);
-      const photosPerColumn = Math.floor((A4_HEIGHT_PX - 2 * margin) / photoHeight);
+      const calculatedPhotosPerRow = imagesPerRow; // Use user-defined value directly
 
-      const totalPhotos = photosPerRow * photosPerColumn;
+      // Use a smaller fixed margin to allow more rows
+      const fixedMargin = 20; // Reduced margin in pixels
 
-      let currentX = margin;
-      let currentY = margin;
+      // Calculate dynamic horizontal spacing to fill the width
+      const totalPhotoWidth = calculatedPhotosPerRow * photoWidth;
+      const horizontalSpaceRemaining = A4_WIDTH_PX - totalPhotoWidth;
+      const photoHorizontalSpacing = horizontalSpaceRemaining / (calculatedPhotosPerRow + 1);
 
-      for (let i = 0; i < totalPhotos; i++) {
+      // Calculate how many rows can fit with the fixed vertical margin
+      const maxPhotosInColumn = Math.floor((A4_HEIGHT_PX - fixedMargin) / (photoHeight + fixedMargin));
+      const totalPhotosToDraw = calculatedPhotosPerRow * maxPhotosInColumn;
+
+      let currentX = photoHorizontalSpacing;
+      let currentY = fixedMargin;
+      let rowCount = 0;
+
+      for (let i = 0; i < totalPhotosToDraw; i++) {
         ctx.drawImage(img, currentX, currentY, photoWidth, photoHeight);
 
-        // Draw light cut lines
-        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-        ctx.lineWidth = 1;
+        // Draw black border
+        ctx.strokeStyle = '#000000'; // Black color
+        ctx.lineWidth = 2; // 2-pixel border
         ctx.strokeRect(currentX, currentY, photoWidth, photoHeight);
 
-        currentX += photoWidth + margin;
-        if (currentX + photoWidth + margin > A4_WIDTH_PX) {
-          currentX = margin;
-          currentY += photoHeight + margin;
+        currentX += photoWidth + photoHorizontalSpacing;
+        rowCount++;
+
+        if (rowCount >= calculatedPhotosPerRow) {
+          currentX = photoHorizontalSpacing; // Start from the first horizontal margin
+          currentY += photoHeight + fixedMargin; // Use fixedMargin for vertical spacing
+          rowCount = 0;
+          if (currentY + photoHeight + fixedMargin > A4_HEIGHT_PX) { // Use fixedMargin for vertical check
+            break; // Stop if no more space on the sheet
+          }
         }
       }
       dispatch({ type: 'SET_FINAL_SHEET', payload: canvas.toDataURL('image/jpeg', 0.9) });
     };
-  }, [processedImage, dispatch]);
+  }, [processedImage, imagesPerRow, dispatch]);
 
   useEffect(() => {
     generateA4Sheet();
-  }, [processedImage, generateA4Sheet]);
+  }, [processedImage, imagesPerRow, generateA4Sheet]);
 
   const handleDownload = () => {
     if (finalSheetURL) {
@@ -85,6 +104,12 @@ const A4SheetPreview = ({ processedImage, finalSheetURL, dispatch }) => {
             disabled={!finalSheetURL}
           >
             Download A4 Sheet (JPG)
+          </button>
+          <button
+            onClick={() => dispatch({ type: 'RESET_STATE' })}
+            className="w-full px-4 py-2 mt-2 bg-red-600 text-white rounded-md font-semibold transition-colors hover:bg-red-700"
+          >
+            Start Over
           </button>
         </>
       ) : (

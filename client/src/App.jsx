@@ -6,16 +6,14 @@ import PhotoEditorControls from './components/PhotoEditorControls';
 import A4SheetPreview from './components/A4SheetPreview';
 
 function App() {
-  const [state, dispatch] = useReducer(reducer, initialState, (init) => {
-    const saved = localStorage.getItem('passportPhotoData');
-    return saved ? JSON.parse(saved) : init;
-  });
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-  useEffect(() => {
-    localStorage.setItem('passportPhotoData', JSON.stringify(state));
-  }, [state]);
+  // Removed localStorage persistence as per user request.
+  // useEffect(() => {
+  //   localStorage.setItem('passportPhotoData', JSON.stringify(state));
+  // }, [state]);
 
-  const { uploadedImage, cropData, alignedImage, processedImage, backgroundColor, finalSheetURL, loading, error } = state;
+  const { uploadedImage, cropData, alignedImage, processedImage, backgroundColor, finalSheetURL, loading, error, imagesPerRow } = state;
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -39,6 +37,7 @@ function App() {
             <PhotoEditorControls
               alignedImage={alignedImage}
               backgroundColor={backgroundColor}
+              imagesPerRow={imagesPerRow}
               dispatch={dispatch}
               loading={loading}
               error={error}
@@ -51,6 +50,7 @@ function App() {
             <A4SheetPreview
               processedImage={processedImage}
               finalSheetURL={finalSheetURL}
+              imagesPerRow={imagesPerRow}
               dispatch={dispatch}
             />
           </div>

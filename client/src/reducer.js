@@ -7,6 +7,7 @@ export const initialState = {
   finalSheetURL: null,
   loading: false,
   error: null,
+  imagesPerRow: 3, // Default value for images per row
 };
 
 export const reducer = (state, action) => {
@@ -29,6 +30,10 @@ export const reducer = (state, action) => {
       return { ...state, error: action.payload, loading: false };
     case "LOAD_SAVED_STATE":
       return { ...state, ...action.payload };
+    case "SET_IMAGES_PER_ROW":
+      return { ...state, imagesPerRow: action.payload };
+    case "RESET_STATE":
+      return initialState;
     default:
       return state;
   }
